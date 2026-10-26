@@ -1,0 +1,13 @@
+# Allowlist: only the code used in the paper is tracked. Everything else in
+# this folder (older experiments, backups, caches, figures, model weights) is
+# ignored.
+/*
+!/.gitignore
+!/README.md
+!/models.py
+!/paths.py
+!/train_networks.py
+!/generate_finalized_figures.py
+!/spectral_bias_scalar/
+/spectral_bias_scalar/*
+!/spectral_bias_scalar/section6_plots.py
