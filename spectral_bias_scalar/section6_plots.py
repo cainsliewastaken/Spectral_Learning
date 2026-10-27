@@ -25,22 +25,45 @@ import matplotlib.pyplot as plt
 from matplotlib import rcParams
 
 # ----------------------------------------------------------------------------
-# Global style: clean, consistent, paper-friendly.
+# Global style: the same as generate_finalized_figures.py, so the appendix
+# figures match the operator-learning figures.
 # ----------------------------------------------------------------------------
+FONT_SMALL = 8
+FONT_BASE = 9
+FONT_LABEL = 9.5
+FIG_WIDTH = 7.4  # inches; shared with generate_finalized_figures.py
+
 rcParams.update({
-    "figure.dpi": 130,
-    "savefig.dpi": 200,
-    "font.size": 11,
-    "axes.titlesize": 12,
-    "axes.labelsize": 11,
-    "legend.fontsize": 9,
+    "font.size": FONT_BASE,
+    "axes.labelsize": FONT_LABEL,
+    "axes.titlesize": FONT_LABEL,
+    "xtick.labelsize": FONT_SMALL,
+    "ytick.labelsize": FONT_SMALL,
+    "legend.fontsize": FONT_SMALL,
+    "font.family": "serif",
+    "mathtext.fontset": "cm",
+    "axes.linewidth": 0.8,
+    "lines.linewidth": 1.3,
+    "xtick.direction": "in",
+    "ytick.direction": "in",
+    "xtick.top": True,
+    "ytick.right": True,
     "axes.grid": True,
     "grid.alpha": 0.3,
-    "grid.linewidth": 0.6,
     "axes.axisbelow": True,
-    "lines.linewidth": 2.0,
+    "figure.dpi": 110,
+    "savefig.dpi": 300,
     "figure.constrained_layout.use": True,
 })
+
+LABEL_KW = dict(fontsize=FONT_LABEL, fontweight="bold", va="bottom", ha="left")
+LEGEND_KW = dict(framealpha=0.92, fancybox=False, handlelength=1.4,
+                 borderaxespad=0.4)
+TEXT_BOX = dict(facecolor="white", edgecolor="none", alpha=0.82, pad=0.15)
+
+
+def panel_label(ax, text):
+    ax.text(0.0, 1.05, text, transform=ax.transAxes, **LABEL_KW)
 
 OUTDIR = "figs"
 os.makedirs(OUTDIR, exist_ok=True)
@@ -49,7 +72,8 @@ rng = np.random.default_rng(0)
 
 def save(fig, name):
     for ext in ("png", "pdf"):
-        fig.savefig(os.path.join(OUTDIR, f"{name}.{ext}"), bbox_inches="tight")
+        fig.savefig(os.path.join(OUTDIR, f"{name}.{ext}"), bbox_inches="tight",
+                    pad_inches=0.04)
     plt.close(fig)
     print("wrote", name)
 
@@ -165,7 +189,7 @@ def fig_depth_geometry():
     eta = 0.02
     n_steps = 700
 
-    fig, (axL, axR) = plt.subplots(1, 2, figsize=(11.0, 4.3))
+    fig, (axL, axR) = plt.subplots(1, 2, figsize=(FIG_WIDTH, 3.0))
     colors = plt.cm.plasma(np.linspace(0.08, 0.78, len(depths)))
     for L, col in zip(depths, colors):
         w = np.full(L, m0 ** (1.0 / L))   # balanced init so factors stay equal
@@ -177,20 +201,22 @@ def fig_depth_geometry():
             g = (Sxx * m - Sxy)
             grad = g * m / w               # = g * prod_{j!=l} w_j
             w = w - eta * grad
-        lbl = "shallow ($L=1$)" if L == 1 else fr"depth $L={L}$"
+        lbl = "Shallow ($L=1$)" if L == 1 else fr"Depth $L={L}$"
         axL.plot(m_traj, color=col, label=lbl)
         axR.semilogy(err_traj, color=col, label=lbl)
 
-    axL.axhline(mstar, ls="--", lw=1.2, color="0.4")
-    axL.text(n_steps * 0.97, mstar + 0.06, r"$m^\ast$", ha="right",
-             va="bottom", color="0.4")
-    axL.set_xlabel("gradient step $n$")
-    axL.set_ylabel(r"effective parameter $m^n$")
-    axL.legend(loc="lower right")
+    axL.axhline(mstar, ls="--", lw=1.0, color="0.4")
+    axL.text(n_steps * 0.97, mstar - 0.05, r"$m^\ast$", ha="right",
+             va="top", color="0.4", fontsize=FONT_LABEL)
+    axL.set_xlabel("Gradient Step $n$")
+    axL.set_ylabel(r"Effective Parameter $m^n$")
+    axL.legend(loc="lower right", **LEGEND_KW)
+    panel_label(axL, "(a)")
 
-    axR.set_xlabel("gradient step $n$")
-    axR.set_ylabel(r"$|m^n - m^\ast|$")
-    axR.legend(loc="lower left")
+    axR.set_xlabel("Gradient Step $n$")
+    axR.set_ylabel(r"Error $|m^n - m^\ast|$")
+    axR.legend(loc="lower left", **LEGEND_KW)
+    panel_label(axR, "(b)")
 
     save(fig, "fig3_depth_geometry")
 
@@ -246,22 +272,24 @@ def fig_modal_rates():
     H_orth = run(G_orth, eta_orth)
     H_non = run(G_non, eta_non)
 
-    fig, (axL, axR) = plt.subplots(1, 2, figsize=(11.0, 4.3), sharey=True)
+    fig, (axL, axR) = plt.subplots(1, 2, figsize=(FIG_WIDTH, 3.0), sharey=True)
     for k in modes_to_plot:
         axL.semilogy(H_orth[:, k], color=cmap[k], label=fr"$k={k+1}$")
         axR.semilogy(H_non[:, k], color=cmap[k], label=fr"$k={k+1}$")
 
     for ax in (axL, axR):
-        ax.set_xlabel("gradient step $n$")
+        ax.set_xlabel("Gradient Step $n$")
         ax.set_ylim(1e-6, 3)
-    axL.set_ylabel(r"modal error $|a_k^n - c_k|$")
-    axL.legend(ncol=2, loc="upper right")
-    axL.text(0.03, 0.05, "sine modes diagonalize $G$:\nidentical rate for every mode",
-             transform=axL.transAxes, fontsize=9, va="bottom",
-             bbox=dict(boxstyle="round", fc="white", ec="0.7", alpha=0.9))
-    axR.text(0.03, 0.05, "sine modes are coupled;\nclean rates live in $G$'s eigenbasis",
-             transform=axR.transAxes, fontsize=9, va="bottom",
-             bbox=dict(boxstyle="round", fc="white", ec="0.7", alpha=0.9))
+    axL.set_ylabel(r"Modal Error $|a_k^n - c_k|$")
+    axL.legend(ncol=2, loc="upper right", **LEGEND_KW)
+    axL.text(0.03, 0.05, r"Orthogonal Sampling, $G \propto I$",
+             transform=axL.transAxes, fontsize=FONT_SMALL, va="bottom",
+             bbox=TEXT_BOX)
+    axR.text(0.03, 0.05, "Non-Orthogonal Sampling",
+             transform=axR.transAxes, fontsize=FONT_SMALL, va="bottom",
+             bbox=TEXT_BOX)
+    panel_label(axL, "(a)")
+    panel_label(axR, "(b)")
 
     save(fig, "fig4_modal_rates")
 

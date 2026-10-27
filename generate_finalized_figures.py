@@ -34,7 +34,7 @@ mpl.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 from matplotlib.lines import Line2D
-from matplotlib.ticker import LogLocator
+from matplotlib.ticker import FuncFormatter, LogLocator, MaxNLocator
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
 import models  # noqa: F401  — needed to unpickle model.pt
@@ -123,7 +123,6 @@ def loglog_fine_grid(ax):
     ax.xaxis.set_minor_locator(LogLocator(base=10.0, subs=subs, numticks=100))
     ax.yaxis.set_minor_locator(LogLocator(base=10.0, subs=subs, numticks=100))
     ax.grid(True, which="major", alpha=0.3)
-    ax.grid(True, which="minor", alpha=0.3)
 
 
 def save_both(fig, stem):
@@ -447,7 +446,7 @@ def fig_spectral_gap(results, sample=0):
     fig, axes = plt.subplots(3, 2, figsize=(FIG_WIDTH, 6.70),
                              gridspec_kw=dict(left=0.12, right=0.99,
                                               top=0.97, bottom=0.09,
-                                              hspace=0.22, wspace=0.22))
+                                              hspace=0.34, wspace=0.22))
     handles, labels = [], []
     ymaxs = []
     PHYS_SEED = 17
@@ -502,7 +501,7 @@ def fig_spectral_gap(results, sample=0):
                   f"truth_history step={U_step}")
 
         ax_sp.set_xlabel(r"Sine Mode $k$")
-        ax_sp.grid(True, alpha=0.3, which="both")
+        ax_sp.grid(True, alpha=0.3)
         panel_label(ax_sp, f"({chr(ord('e') + col)})")
 
         f_shared = _forcing_batch(1, forcing, PHYS_SEED + col)
@@ -535,6 +534,8 @@ def fig_spectral_gap(results, sample=0):
                 gc.collect()
             ax.plot(x, u_true, color="k", lw=2.0, linestyle=":", zorder=4)
             ax.set_xlabel(r"$x$")
+            if kind == "final":
+                ax.yaxis.set_major_locator(MaxNLocator(nbins=4))
             ax.grid(True, alpha=0.3)
             ax.text(0.04, 0.96, rf"$t={t_lab}$", transform=ax.transAxes,
                     ha="left", va="top", fontsize=FONT_SMALL)
@@ -542,8 +543,7 @@ def fig_spectral_gap(results, sample=0):
 
     axes[0, 0].set_ylabel(r"$u(x)$")
     axes[1, 0].set_ylabel(r"$u(x)$")
-    axes[2, 0].set_ylabel(
-        r"$\langle (S^\top u_\theta^\mu)_k^2 \rangle_\mu^{1/2}$")
+    axes[2, 0].set_ylabel(r"RMS Modal Amplitude")
     hi = max(ymaxs) * 2.0 if ymaxs else 1.0
     axes[2, 0].set_ylim(1e-9, hi)
     axes[2, 1].set_ylim(1e-5, hi)
@@ -598,8 +598,8 @@ def fig_loss_curves(results, smooth_window=51):
                   f"rolling mean w={min(smooth_window, len(loss))}  "
                   f"final={float(y[-1]):.3e}")
         ax.set_xlabel("Training Step")
-        ax.set_xlim(left=1)
-        ax.grid(True, alpha=0.3, which="both")
+        ax.set_xlim(left=0)
+        ax.grid(True, alpha=0.3)
         panel_label(ax, f"({lab})")
     axes[0].set_ylabel(r"Training MSE")
     place_legend(fig, axes, handles, labels, ncol=3)
@@ -655,7 +655,7 @@ def fig_final_spectra(results):
                 if row == 1 and forcing == FORCINGS[0]:
                     handles.append(ln)
                     labels.append(name)
-            ax.grid(True, alpha=0.3, which="both")
+            ax.grid(True, alpha=0.3)
             panel_label(ax, f"({lab})")
             if row == 1:
                 ax.set_xlabel(r"Sine Mode $k$")
@@ -734,7 +734,7 @@ def fig_diag_failure(results):
     ]
     ax_r.set_xlabel(r"Fourier Mode Index $k$")
     ax_r.set_ylabel(r"Rayleigh Quotient $R_k$")
-    ax_r.grid(True, alpha=0.3, which="both")
+    ax_r.grid(True, alpha=0.3)
     panel_label(ax_r, "(b)")
 
     dummy_models = [Line2D([], [], color=c, lw=1.4, label=n)
@@ -1071,12 +1071,12 @@ def fig_misalignment(results, forcing="white"):
         ax.set_anchor("S")
         ims.append(im)
         hm_axes.append(ax)
-        panel_label(ax, "(a)" if i == 0 else "", dy=0.08)
+        panel_label(ax, "(a)" if i == 0 else "", dx=-0.50, dy=0.03)
         ax.set_title(name, fontsize=FONT_SMALL)
         if name == "Nonlinear FNO":
             ax.set_xlabel(r"Eigenvector Rank $\alpha$")
         if sort_by_k:
-            ax.set_xlabel(r"Eigenvector (by peak $k$)", fontsize=FONT_SMALL)
+            ax.set_xlabel(r"Eigenvector Sorted by Peak $k$")
         if i == 0:
             ax.set_ylabel(r"Sine Mode $k$")
             if slug == "ideal_diagonal_spectral":
@@ -1123,7 +1123,7 @@ def fig_misalignment(results, forcing="white"):
     ax_b.set_yscale("log")
     ax_b.set_xlabel(r"Frequency Centroid $\bar{k}_\alpha$")
     ax_b.set_ylabel(r"Per-Step Rate $\eta\lambda_\alpha$")
-    ax_b.grid(True, alpha=0.3, which="both")
+    ax_b.grid(True, alpha=0.3)
     panel_label(ax_b, "(b)")
 
     # ---- panel (c): participation ratio vs eigenvalue ----
@@ -1159,16 +1159,16 @@ def fig_misalignment(results, forcing="white"):
         del K
         gc.collect()
     ax_c.axhline(1.0, color="0.55", lw=1.6, ls="--", zorder=1,
-                 label=r"Sine mode ($\mathrm{PR} = 1$)")
+                 label=r"Sine Mode ($\mathrm{PR} = 1$)")
     ax_c.axhline(pr_haar, color="0.55", lw=1.6, ls=":", zorder=1,
-                 label=r"Random vector ($\mathrm{PR} = (N+2)/3$)")
+                 label=r"Random Vector ($\mathrm{PR} = (N+2)/3$)")
     ax_c.set_xscale("log")
     ax_c.set_yscale("log")
     ax_c.set_xlim(lam_lo * 0.4, lam_hi * 2.5)
     ax_c.set_ylim(0.7, 5e2)
     ax_c.set_xlabel(r"Per-Step Rate $\eta\lambda_\alpha$")
     ax_c.set_ylabel(r"Participation Ratio $\mathrm{PR}_\alpha$")
-    ax_c.grid(True, alpha=0.3, which="both")
+    ax_c.grid(True, alpha=0.3)
     panel_label(ax_c, "(c)")
     ax_c.legend(loc="upper left", framealpha=0.92, fontsize=FONT_SMALL,
                 handlelength=1.4, borderaxespad=0.4, fancybox=False)
@@ -1470,7 +1470,7 @@ def fig_error_loading(results):
                 ax.set_ylim(mid / 40.0, mid * 40.0)
             else:
                 ax.set_ylim(max(ylo * 0.4, FLOOR), yhi * 2.5)
-            ax.grid(True, alpha=0.25, which="both")
+            ax.grid(True, alpha=0.25)
             if fi == 0:
                 ax.text(0.03, 0.96, short, transform=ax.transAxes,
                         va="top", ha="left", fontsize=FONT_SMALL,
@@ -1766,17 +1766,39 @@ def _apply_grid_lim(ax, spec, d, ax_a=None):
         ax.set_ylim(y0, y1)
 
 
+# Panels where the default lower-right model name would sit on a curve.
+MODEL_TEXT_POS = {("linear_fno_k64", "smooth"): (0.03, 0.72, "left")}
+
+
+def _sub_decade_ticks(ax):
+    """Label a log y axis spanning less than a decade with m x 10^e ticks."""
+    y0, y1 = ax.get_ylim()
+    if not (0 < y0 < y1) or y1 / y0 >= 10:
+        return
+    loc = LogLocator(base=10.0, subs=(1, 1.5, 2, 2.5, 3, 4, 5, 6, 8),
+                     numticks=50)
+    if sum(y0 <= t <= y1 for t in loc.tick_values(y0, y1)) < 3:
+        return
+
+    def fmt(v, _):
+        e = int(np.floor(np.log10(v) + 1e-9))
+        return rf"${v / 10.0 ** e:g}\times 10^{{{e}}}$"
+
+    ax.yaxis.set_major_locator(loc)
+    ax.yaxis.set_major_formatter(FuncFormatter(fmt))
+    ax.yaxis.set_minor_formatter(FuncFormatter(lambda v, _: ""))
+
+
 def _draw_tail_row(_fig, ax_a, ax_b, d, lab_a, lab_b, *,
                    in_axes_legend=True, model_in_legend=True,
                    model_text=False, grid_lim=None):
     label = d["label"]
-    k_lab = (rf"Full $K_{{\mu\nu}}$ {label}" if model_in_legend
-             else rf"Full $K_{{\mu\nu}}$")
+    k_lab = r"Full Stacked Kernel $K$"
     ax_a.loglog(d["lam_grid"], d["G_full"], color="tab:red", label=k_lab)
     ax_a.loglog(d["lam_grid"], d["G_bd"], color="0.45", ls="--",
                 label="Cross Terms Removed")
     ax_a.axhline(d["E_now"], color="k", lw=0.8, ls=":",
-                 label="Observed Error $E$")
+                 label="Measured RMS Error $E$")
     ax_a.axvline(d["lam_star"], color="tab:blue", lw=1.2, ls="-",
                  label=r"$\eta\lambda^*$")
     ax_a.set_xlabel(r"Per-Step Rate $\eta\lambda$")
@@ -1787,8 +1809,10 @@ def _draw_tail_row(_fig, ax_a, ax_b, d, lab_a, lab_b, *,
         ax_a.legend(loc=loc_a, framealpha=0.92, fontsize=FONT_SMALL,
                     handlelength=1.4, fancybox=False, borderaxespad=0.4)
     if model_text:
-        ax_a.text(0.97, 0.05, label, transform=ax_a.transAxes,
-                  ha="right", va="bottom", fontsize=FONT_SMALL,
+        tx, ty, tha = MODEL_TEXT_POS.get((d["slug"], d.get("forcing")),
+                                         (0.97, 0.05, "right"))
+        ax_a.text(tx, ty, label, transform=ax_a.transAxes,
+                  ha=tha, va="bottom", fontsize=FONT_SMALL,
                   bbox=dict(facecolor="white", edgecolor="none",
                             alpha=0.82, pad=0.15))
     panel_label(ax_a, f"({lab_a})")
@@ -1818,6 +1842,7 @@ def _draw_tail_row(_fig, ax_a, ax_b, d, lab_a, lab_b, *,
     if grid_lim:
         _apply_grid_lim(ax_a, grid_lim.get("a"), d)
         _apply_grid_lim(ax_b, grid_lim.get("b"), d, ax_a=ax_a)
+    _sub_decade_ticks(ax_a)
 
 
 def plot_tail_causes_single(d, stem):
@@ -1835,7 +1860,7 @@ def plot_tail_causes_gelu_combined(d_smooth, d_white):
     fig = plt.figure(figsize=(FIG_WIDTH, 6.20))
     gs = fig.add_gridspec(
         2, 2, left=0.12, right=0.99, top=0.91, bottom=0.14,
-        hspace=0.30, wspace=0.22)
+        hspace=0.42, wspace=0.22)
     axes = np.empty((2, 2), dtype=object)
     axes[0, 0] = fig.add_subplot(gs[0, 0])
     axes[0, 1] = fig.add_subplot(gs[0, 1])
@@ -1847,12 +1872,9 @@ def plot_tail_causes_gelu_combined(d_smooth, d_white):
             fig, axes[0, col], axes[1, col], d,
             chr(ord("a") + col), chr(ord("c") + col),
             in_axes_legend=False, model_in_legend=True)
-        axes[0, col].set_xlabel("")
         if col == 1:
             axes[0, col].set_ylabel("")
             axes[1, col].set_ylabel("")
-    plt.setp(axes[0, 0].get_xticklabels(), visible=False)
-    plt.setp(axes[0, 1].get_xticklabels(), visible=False)
 
     handles, labels = axes[0, 0].get_legend_handles_labels()
     place_legend(fig, axes, handles, labels, ncol=4)
@@ -2072,7 +2094,7 @@ def _gelu_error_curves(ax, steps, E, karr, norm):
     for si in sel:
         ax.loglog(karr, np.maximum(E[si], 1e-18),
                   color=cm.viridis(norm(max(steps[si], 1))), lw=1.0)
-    ax.grid(True, alpha=0.3, which="both")
+    ax.grid(True, alpha=0.3)
     return sel
 
 
@@ -2100,7 +2122,7 @@ def _milestone_scatter(ax, results, forcing, karr):
               f"modal_abs_err_history steps {int(steps[0])}..{int(steps[-1])}")
     ax.set_yscale("log")
     ax.set_xscale("log")
-    ax.grid(True, alpha=0.3, which="both")
+    ax.grid(True, alpha=0.3)
     return handles, max_tc
 
 
