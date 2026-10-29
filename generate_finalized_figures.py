@@ -333,10 +333,9 @@ def final_abs_spectrum(result):
 
 
 def final_rel_spectrum(result):
-    meh = result.get("modal_err_history") or {}
-    if meh:
-        s = max(k for k in meh if isinstance(k, (int, np.integer)))
-        return meh[s].to(dtype).numpy(), s
+    # epsilon_k = E_k / U_k from the saved absolute errors and true spectra.
+    # The stored modal_err_history adds 1e-16 to U_k^2, which pins the ratio
+    # once U_k < 1e-8 (k > ~55 under smooth forcing), so it is not used here.
     E, s = final_abs_spectrum(result)
     U, _ = truth_spectrum(result)
     if E is None or U is None:
@@ -634,7 +633,7 @@ def fig_final_spectra(results):
         (final_abs_spectrum, r"Absolute RMS Modal Error $E_k$",
          "E_k", "modal_abs_err_history"),
         (final_rel_spectrum, r"Relative RMS Modal Error $\varepsilon_k$",
-         "ε_k", "modal_err_history"),
+         "ε_k", "E_k / U_k (modal_abs_err_history, truth_history)"),
     )
     for row, (spectrum_fn, ylabel, tag, hist_name) in enumerate(rows):
         for col, forcing in enumerate(FORCINGS):
